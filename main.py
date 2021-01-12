@@ -1,8 +1,6 @@
 '''
 Name : Abdullah Saad
-ID #1043850
-CIS*3130 System Modeling and Simulation
-Final Project
+
 '''
 ###############################
 ##### Import Statement #####
