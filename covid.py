@@ -10,68 +10,13 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from matplotlib.colors import SymLogNorm
 
+from SimulationVisualizer import SimulationVisualizer
+from Population import Population
 ###############################
 #####     Functions       #####
 ###############################
-
-###################################################
-## initialized the population for the simulation ##
-###################################################
-
-def population(population_size, mean_age, max_age,x_bounds=[], y_bounds=[]):
-    """
-    Initializes the population for the simulation.
-
-    Args:
-        population_size (int): Number of individuals in the population.
-        mean_age (int): Mean age of the population.
-        max_age (int): Maximum age of individuals.
-        x_bounds (list): Bounds for the x-coordinate (optional).
-        y_bounds (list): Bounds for the y-coordinate (optional).
-
-    Returns:
-        numpy.ndarray: A matrix representing the initialized population.
-    """
-
-    #This matrix is a 14 columns * population size Using numpy package 
-
-    # initialize population matrix 15 * the population size 
-    #numpy. zeros() function returns a new array element's value as 0.
-    population = np.zeros((population_size, 15))
-    # initialize unique IDs for each population
-    population[:, 0] = [i for i in range(population_size)]
-
-    # initialize random coordinates 
-    #############################################################
-    #####     Draw samples from a uniform distribution      #####
-    #############################################################
-
-    #numpy.random. uniform (low=0.0, high=1.0, size=None)
-    # x coodinate and y coodinate
-    population[:, 1] = np.random.uniform(low=x_bounds[0] + 0.01, high=x_bounds[1] - 0.01,size=(population_size))
-    population[:, 2] = np.random.uniform(low=y_bounds[0] + 0.01, high=y_bounds[1] - 0.01,size=(population_size))
-
-    ##############################################################################
-    #####     Draw random samples from a normal (Gaussian) distribution     ######
-    ##############################################################################
-
-    # initialize random headings in x direction and y direction 
-    #loc is (mean),scale is (standard deviation)
-    population[:, 3] = np.random.normal(loc=0, scale=1 / 3,size=(population_size))
-    population[:, 4] = np.random.normal(loc=0, scale=1 / 3,size=(population_size))
-    # initialize random speeds
-    population[:, 5] = np.random.normal(loc=0.01,scale=0.01 / 3)
-    # initalize ages of each population 
-    # Integer (-2147483648 to 2147483647)
-    population[:, 7] = np.int32(np.random.normal(loc=mean_age,scale=(max_age - mean_age) / 3,size=(population_size)))
-    # clip Elements less then 0 age 
-    population[:, 7] = np.clip(population[:, 7], a_min=0,a_max=max_age) 
-    # recovery_vector
-    population[:, 9] = np.random.normal(loc=0.5, scale=0.5 / 3, size=(population_size,))
-
-    # return the array matrix 
-    return population
 
 
 ###################################################
@@ -343,128 +288,49 @@ def Corona_simulation(frame, population, destinations, population_size,wander_fa
     infected_plot.append(len(population[population[:, 6] == 1]))
 
 
-###################################################
-##             figure      build             ##
-##################################################
-def figure_build(xbounds, ybounds,simulation_steps,population_size):
 
+
+
+def visualisation(frame, population, susceptible, infectious, recovered, fatalities1, population_size, ax1):
     """
-    Builds the figure for visualization.
-
-    Returns:
-        matplotlib.figure.Figure: The created figure.
-        matplotlib.gridspec.GridSpec: The grid specification for subplots.
-        matplotlib.axes._subplots.AxesSubplot: The main simulation subplot.
-        matplotlib.axes._subplots.AxesSubplot: The subplot for the number of infected individuals.
-        matplotlib.axes._subplots.AxesSubplot: The subplot for the state of infected individuals.
+    Updates the visualisation for each frame of the simulation.
     """
     
-    fig = plt.figure(figsize=(8, 12))
-    spec = fig.add_gridspec(ncols=4, nrows=4)
-
-    ax1 = fig.add_subplot(spec[:-1, 1:])
-    plt.title('Infection Simulation')
-    plt.xlim(xbounds[0], xbounds[1])
-    plt.ylim(ybounds[0], ybounds[1])
-
-    ax2 = fig.add_subplot(spec[-1, 1:])
-    ax2.set_title('Number of Infected')
-    ax2.set_xlim(0, simulation_steps)
-    ax2.set_ylim(0, population_size + 100)
-
-    ax3 = fig.add_subplot(spec[:-1, 0])
-    ax3.set_title('Infected')
-    ax3.set_xlim([0, simulation_steps])
-    ax3.set_ylim([0, 100])
-
-    return fig, spec, ax1, ax2, ax3
-
-
-###################################################
-##             visualisation of simulation       ##
-##################################################
-def visualisation( frame,population, susceptible,infectious,recovered,fatalities1,fig, spec, ax1, ax2,ax3,inf_sum,hea_sum,rec_sum,dead_sum, simulation_steps,population_size):
-    
-
-    """
-    Visualizes the simulation at each frame.
-
-    Args:
-        frame (int): Current frame or time step in the simulation.
-        population (numpy.ndarray): Matrix representing the population.
-        susceptible (list): List tracking the number of susceptible individuals over time.
-        infectious (list): List tracking the number of infectious individuals over time.
-        recovered (list): List tracking the number of recovered individuals over time.
-        fatalities (list): List tracking the number of fatalities over time.
-        fig (matplotlib.figure.Figure): The figure for visualization.
-        spec (matplotlib.gridspec.GridSpec): The grid specification for subplots.
-        ax1 (matplotlib.axes._subplots.AxesSubplot): The main simulation subplot.
-        ax2 (matplotlib.axes._subplots.AxesSubplot): The subplot for the number of infected individuals.
-        ax3 (matplotlib.axes._subplots.AxesSubplot): The subplot for the state of infected individuals.
-        inf_sum (list): List tracking the cumulative number of infected individuals.
-        hea_sum (list): List tracking the cumulative number of healthy individuals.
-        rec_sum (list): List tracking the cumulative number of recovered individuals.
-        dead_sum (list): List tracking the cumulative number of fatalities.
-
-    Returns:
-        None
-    """
-
-    x_plot = [0, 1.1]
-    y_plot = [0, 1]
-    world_size = [2, 2] #x and y sizes of the world
+    # Clear previous axes content
     ax1.clear()
-    ax2.clear()
-    #ax3.clear()
-    ax1.set_xlim(x_plot[0], x_plot[1])
-    ax1.set_ylim(y_plot[0], y_plot[1])
-
-    # plot population segments
-    healthy = population[population[:,6] == 0][:,1:3]
-    ax1.scatter(healthy[:, 0], healthy[:, 1], color='Green', s=2, label='healthy')
-
-    infected = population[population[:, 6] == 1][:, 1:3]
-    ax1.scatter(infected[:, 0], infected[:, 1], color='red', s=2, label='infected')
-
-    immune = population[population[:, 6] == 2][:, 1:3]
-    ax1.scatter(immune[:, 0], immune[:, 1], color='Blue', s=2, label='immune')
-
-    fatalities = population[population[:, 6] == 3][:, 1:3]
-    ax1.scatter(fatalities[:, 0], fatalities[:, 1], color='black', s=2, label='dead')
-
-    # add text descriptors
-    ax1.text(x_plot[0],y_plot[1] + ((y_plot[1] - y_plot[0]) / 100) ,'Day: [%i], Population: [%i], Healthy: [%i] infected: [%i] Immune: [%i] Fatalities: [%i]' % (frame,len(population),len(healthy),len(infected),len(immune),len(fatalities)),fontsize=6)
-    ax1.legend(loc='best', fontsize=10)
-    
-    ax2.set_title('susceptible/infectious/recovered/fatalities')
-    #ax2.text(0, population_size* 0.05,fontsize=6, alpha=0.5)
-    #ax2.set_xlim(0, simulation_steps)
-    ax2.set_ylim(0, population_size + 200)
-    ax2.plot(susceptible, color='Green', label='susceptible')
-    ax2.plot(infectious, color='Red', label='infectious')
-    ax2.plot(recovered, color='Blue', label='recovered')
-    ax2.plot(fatalities1, color='black', label='fatalities')
-    #ax2.legend(loc='best', fontsize=6)
-    
 
 
-    ax2.set_ylim(0, population_size + 200)
+    # Set limits for scatter plot
+    ax1.set_xlim(0, 1.1)
+    ax1.set_ylim(0, 1)
 
-    
-    ax3.fill_between(frame,hea_sum, color='Green',alpha=0.5)
-    ax3.fill_between(frame,inf_sum,color='red')
-    ax3.fill_between(frame,rec_sum,color='blue')
-    ax3.fill_between(frame,dead_sum,color='black')
+    # Plot population segments
+    colors = {'healthy': 'Green', 'infected': 'Red', 'immune': 'Blue', 'dead': 'Black'}
+    state_labels = {0: 'healthy', 1: 'infected', 2: 'immune', 3: 'dead'}
 
-    
-    #beautify
-    plt.tight_layout()
+    # Adjust marker size based on population size
+    marker_size = 50 / np.sqrt(population_size)  # Example size that may need to be adjusted
+    infected_marker_size = marker_size * 2  # Make infected individuals stand out
 
-    
-    #initialise
-    #plt.show()
+    for state, label in state_labels.items():
+        subset = population[population[:, 6] == state][:, 1:3]
+        # Use different marker size for infected individuals
+        size = infected_marker_size if label == 'infected' else marker_size
+        ax1.scatter(subset[:, 0], subset[:, 1], color=colors[label], s=size, label=f"{label} ({len(subset)})")
+
+    ax1.legend(loc='upper right', fontsize=8, bbox_to_anchor=(1.1, 1.05))
+
+    # Add text descriptors
+    ax1.text(0, 1.05, f'Day: {frame}, Population: {len(population)}, Healthy: {len(susceptible)}, '
+             f'Infected: {len(infectious)}, Immune: {len(recovered)}, Fatalities: {len(fatalities1)}',
+             fontsize=6, ha='left')
+
+    # Draw and pause to create animation effect
+
     plt.draw()
     plt.pause(0.0001)
+
+
 
 ###################################################
 ##             counting function                   ##
@@ -668,15 +534,6 @@ def reset(i,population,destinations,population_size,mean_age,max_age,xbounds,ybo
 def main():
     wander_factor = 1        # area around the boundary
     speed = 0.05             # speed of population
-    world_size = [4, 4]      # x and y sizes of the world
-    x_plot = [0, world_size[0]]  # size of the simulated world in coordinates
-    y_plot = [0, world_size[1]]
-
-
-
-    xbounds = [x_plot[0] + 0.02, x_plot[1] - 0.02]
-    ybounds = [x_plot[0] + 0.02, x_plot[1] - 0.02]
-    infection_range = 0.25
 
     susceptible = []
     infectious = []
@@ -687,7 +544,7 @@ def main():
     hea_sum = []
     rec_sum = []
     dead_sum = []
-    cumulative_sum = []
+
     c = []
 
     
@@ -695,13 +552,10 @@ def main():
     simulation_steps = 2000  # Days
     xbounds = [0, 1]
     ybounds = [0, 1]
-    reinfect = False
 
     population_size = 2000
     mean_age = 45
     max_age = 105
-    mean_speed = 0.01
-    std_speed = 0.01 / 3
     disease_range = 1
     infection_chance = 0.6
     recovery_duration = (50, 100)
@@ -709,9 +563,6 @@ def main():
     lockdown_percentage = 0
     complying = 0
 
-    #fig, spec, ax1, ax2, ax3 = figure_build(xbounds, ybounds,simulation_steps,population_size)
-    infected_plot = []
-    fatalities_plot = []
 
     print('Welcome To Covid-19 Simulation')
     first_day_of_infection = int(input("Please enter the first day of infection (between day 1 - 500): "))
@@ -741,27 +592,40 @@ def main():
     elif self_isolation == "false":
         speed = 1
 
-    Covid_population = population(population_size, mean_age, max_age, xbounds, ybounds)
+    # Create a population instance
+    #pop = Population(population_size, mean_age, max_age, x_bounds, y_bounds)
+
+    # Access the population matrix
+    #population_matrix = pop.matrix
+
+    Covid_population = Population(population_size, mean_age, max_age, xbounds, ybounds)
     destinations = np.zeros((population_size, 1 * 2))
-    fig, spec, ax1, ax2, ax3 = figure_build(xbounds, ybounds,simulation_steps,population_size)
+    # Before starting the simulation loop
+    #ax1 = setup_visualization()
 
     fargs = (Covid_population, destinations, population_size, disease_range, infection_chance, recovery_duration, mortality_chance, xbounds, ybounds, complying)
-    animation = FuncAnimation(fig, Corona_simulation, fargs=fargs, frames=simulation_steps, interval=33)
-
-    for i in range(simulation_steps):
-        Corona_simulation(i, Covid_population, destinations, population_size, wander_factor, speed, infectious, first_day_of_infection, lockdown, lockdown_percentage, complying)
-        visualisation(i, Covid_population, susceptible, infectious, recovered, fatalities1, fig, spec, ax1, ax2, ax3, inf_sum, hea_sum, rec_sum, dead_sum, simulation_steps, population_size)
-        counting(Covid_population, population_size, susceptible, infectious, recovered, fatalities1, inf_sum, hea_sum, rec_sum, dead_sum, simulation_steps, c, i)
+    #animation = FuncAnimation(fig, Corona_simulation, fargs=fargs, frames=simulation_steps, interval=33)
+    visualizer = SimulationVisualizer(population_size)
+    for frame in range(simulation_steps):
+        Corona_simulation(frame, Covid_population, destinations, population_size, wander_factor, speed, infectious, first_day_of_infection, lockdown, lockdown_percentage, complying)
+        counting(Covid_population, population_size, susceptible, infectious, recovered, fatalities1, inf_sum, hea_sum, rec_sum, dead_sum, simulation_steps, c, frame)
         healthy = Covid_population[Covid_population[:, 6] == 0][:, 1:3]
         infected = Covid_population[Covid_population[:, 6] == 1][:, 1:3]
         immune = Covid_population[Covid_population[:, 6] == 2][:, 1:3]
         fatalities = Covid_population[Covid_population[:, 6] == 3][:, 1:3]
+
+
+        #visualisation(frame, Covid_population, healthy, infected, immune, fatalities, population_size, ax1)
+        #population_size = 2000  # Example size
+        #visualizer = SimulationVisualizer(population_size)
+        visualizer.update_visualization(frame, Covid_population, healthy, infected, immune, fatalities)
+        
         
         if len(immune) + len(fatalities) == population_size:
-            reset(i, Covid_population, destinations, population_size, mean_age, max_age, xbounds, ybounds)
+            reset(frame, Covid_population, destinations, population_size, mean_age, max_age, xbounds, ybounds)
         
         sys.stdout.write('\r')
-        sys.stdout.write('Days: %i , total: [%i], healthy: [%i] infected: [%i] immune: [%i] fatalities: [%i]' % (i, len(Covid_population), len(healthy), len(infected), len(immune), len(fatalities)))
+        sys.stdout.write('Days: %i , total: [%i], healthy: [%i] infected: [%i] immune: [%i] fatalities: [%i]' % (frame, len(Covid_population), len(healthy), len(infected), len(immune), len(fatalities)))
         sys.stdout.write('\r')
 
 if __name__ == '__main__':
